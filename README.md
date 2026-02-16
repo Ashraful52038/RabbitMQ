@@ -137,6 +137,7 @@ graph TB
 
 # 📚 Tutorials
 ## Level 1: Fundamentals
+```mermaid
 classDiagram
     class HelloWorld {
         Description: Basic publish/subscribe
@@ -166,9 +167,36 @@ sequenceDiagram
     Q->>W2: Deliver Task 2
     W1-->>Q: Acknowledge Task 1
     W2-->>Q: Acknowledge Task 2
+```
 
 ## Level 2: Exchange Patterns
+```mermaid
+classDiagram
+    class PublishSubscribe {
+        Description: Broadcast to all queues
+        Code: View Code
+        Exchange Type: Fanout
+    }
 
+    class Routing {
+        Description: Selective message routing
+        Code: View Code
+        Exchange Type: Direct
+    }
+
+    class Topics {
+        Description: Pattern-based routing
+        Code: View Code
+        Exchange Type: Topic
+    }
+
+    PublishSubscribe <|-- ExchangePatterns
+    Routing <|-- ExchangePatterns
+    Topics <|-- ExchangePatterns
+```
+
+## Level 2: Exchange Patterns
+```mermaid
 classDiagram
     class PublishSubscribe {
         Description: Broadcast to all queues
@@ -192,10 +220,327 @@ classDiagram
     Routing <|-- ExchangePatterns
     Topics <|-- ExchangePatterns
 
+graph LR
+    subgraph "Topic Exchange Example"
+        P[Producer] --> TE{Topic Exchange}
+        TE -->|"*.critical.*"| Q1[Critical Queue]
+        TE -->|"log.*"| Q2[Log Queue]
+        TE -->|"*.warning"| Q3[Warning Queue]
+    end
+```
 
+## Level 3: Advanced Patterns
+```mermaid
+classDiagram
+    class RPC {
+        Description: Request-Reply pattern
+        Code: View Code
+        Use Case: Synchronous communication
+    }
 
+    class DeadLetter {
+        Description: Failed message handling
+        Code: View Code
+        Use Case: Error handling, retries
+    }
+
+    class Priority {
+        Description: Priority-based processing
+        Code: View Code
+        Use Case: VIP queues, urgent tasks
+    }
+
+    RPC <|-- AdvancedPatterns
+    DeadLetter <|-- AdvancedPatterns
+    Priority <|-- AdvancedPatterns
+```
+
+# 🔧 Advanced Features Implementation
+## 1. Dead Letter Exchange (DLX)
+
+    // Configure queue with DLX
+    queueArgs := amqp.Table{
+        "x-dead-letter-exchange":    "dlx.exchange",
+        "x-dead-letter-routing-key": "dlx-routing-key",
+        "x-message-ttl":             30000, // 30 seconds
+    }
     
+    queue, err := ch.QueueDeclare(
+        "main.queue",
+        true,  // durable
+        false, // auto-delete
+        false, // exclusive
+        false, // no-wait
+        queueArgs,
+    )
+```mermaid
+flowchart TD
+    M[Message] --> Q[Main Queue]
+    Q -->|Success| C[Consumer]
+    Q -->|Failure/Expired| DLX{Dead Letter Exchange}
+    DLX --> DLQ[Dead Letter Queue]
+    DLQ --> RC[Retry Consumer]
+    RC -->|Reprocess| Q
+```
+
+## 2. Priority Queue
+    // Enable priorities (0-10)
+    queueArgs := amqp.Table{
+        "x-max-priority": 10,
+    }
+    
+    // Publish with priority
+    msg := amqp.Publishing{
+        Body:     []byte("Urgent message"),
+        Priority: 9, // Higher priority = processed first
+    }
+## 3. Manual Acknowledgment
+    msgs, err := ch.Consume(
+        queue.Name,
+        "",
+        false, // auto-ack = false (manual mode)
+        false,
+        false,
+        false,
+        nil,
+    )
+    
+    for d := range msgs {
+        err := processMessage(d.Body)
+        if err == nil {
+            d.Ack(false) // Acknowledge success
+        } else {
+            d.Nack(false, false) // Reject, don't requeue
+        }
+    }
+
+# 📦 Project Structure
+```mermaid
+graph TD
+    A[📁 RabbitMq] --> B[docker-compose.yml]
+    A --> C[📁 rabbitmq-go-example]
+    A --> D[📁 rabbitmq-work-queues]
+    A --> E[📁 rabbitmq-pub-sub]
+    A --> F[📁 rabbitmq-routing]
+    A --> G[📁 rabbitmq-topics]
+    A --> H[📁 rabbitmq-rpc]
+
+    C --> C1[📁 cmd]
+    C1 --> C2[publisher]
+    C1 --> C3[consumer]
+    C --> C4[README.md]
+
+    D --> D1[📁 cmd]
+    D1 --> D2[worker]
+    D1 --> D3[new_task]
+    D --> D4[README.md]
+
+    E --> E1[📁 cmd]
+    E1 --> E2[emit_log]
+    E1 --> E3[receive_logs]
+    E --> E4[README.md]
+
+    F --> F1[📁 cmd]
+    F1 --> F2[emit_log_direct]
+    F1 --> F3[receive_logs_direct]
+    F --> F4[README.md]
+
+    G --> G1[📁 cmd]
+    G1 --> G2[emit_log_topic]
+    G1 --> G3[receive_logs_topic]
+    G --> G4[README.md]
+
+    H --> H1[📁 cmd]
+    H1 --> H2[rpc_server]
+    H1 --> H3[rpc_client]
+    H --> H4[README.md]
+```
+
+# 🛠️ Docker Compose Setup
+
+**Create a docker-compose.yml file:
+
+    version: '3.8'
+    
+    services:
+      rabbitmq:
+        image: rabbitmq:3-management
+        container_name: rabbitmq
+        hostname: rabbitmq
+        ports:
+          - "5672:5672"   # AMQP protocol
+          - "15672:15672" # Management UI
+          - "15692:15692" # Prometheus metrics
+        environment:
+          RABBITMQ_DEFAULT_USER: admin
+          RABBITMQ_DEFAULT_PASS: admin
+          RABBITMQ_DEFAULT_VHOST: /
+        volumes:
+          - rabbitmq_data:/var/lib/rabbitmq
+          - rabbitmq_log:/var/log/rabbitmq
+        networks:
+          - rabbitmq_network
+        healthcheck:
+          test: ["CMD", "rabbitmq-diagnostics", "ping"]
+          interval: 30s
+          timeout: 10s
+          retries: 5
+    
+    volumes:
+      rabbitmq_data:
+      rabbitmq_log:
+    
+    networks:
+      rabbitmq_network:
+        driver: bridge
 
 
+# 🧪 Testing
+    bash
+    
+    # Run all tests
+    go test ./...
+    
+    # Run specific tutorial tests
+    cd rabbitmq-work-queues
+    go test -v ./...
+    
+    # Load testing
+    go test -bench=. ./...
+
+# 📈 Monitoring & Management
+
+Access RabbitMQ Management UI:
+
+    URL: http://localhost:15672
+
+    Username: admin
+
+    Password: admin
+
+## Useful Commands
+    bash
+    
+    # List queues
+    docker exec rabbitmq rabbitmqctl list_queues
+    
+    # List exchanges
+    docker exec rabbitmq rabbitmqctl list_exchanges
+    
+    # List bindings
+    docker exec rabbitmq rabbitmqctl list_bindings
+    
+    # Check cluster status
+    docker exec rabbitmq rabbitmqctl cluster_status
+    
+    # View logs
+    docker logs -f rabbitmq
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+    Fork the repository
+
+    Create your feature branch (git checkout -b feature/AmazingFeature)
+
+    Commit your changes (git commit -m 'Add some AmazingFeature')
+
+    Push to the branch (git push origin feature/AmazingFeature)
+
+    Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+👨‍💻 Author
+
+**Ashraful Islam**
+
+    GitHub: @Ashraful52038
+
+    LinkedIn: Ashraful Islam
+
+## 🙏 Acknowledgments
+
+    RabbitMQ Team for amazing message broker
+
+    Go RabbitMQ Client contributors
+
+    All contributors and users of this tutorial series
+
+<div align="center">
+⭐ If you find this useful, please star the repository!
+
+https://img.shields.io/github/stars/Ashraful52038/RabbitMq?style=social
+https://img.shields.io/github/forks/Ashraful52038/RabbitMq?style=social
+https://img.shields.io/twitter/follow/ashraful?style=social
 
 Happy Coding! 🚀
+</div> EOF ```
+GitHub-এ আপলোড করুন:
+bash
+
+cd ~/Documents/RabbitMq
+git add README.md
+git commit -m "Add professional README with shields.io badges and Mermaid diagrams"
+git push origin main
+
+docker-compose.yml ফাইল তৈরি করুন (ঐচ্ছিক):
+bash
+
+cd ~/Documents/RabbitMq
+cat > docker-compose.yml << 'EOF'
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"   # AMQP protocol port
+      - "15672:15672" # Management UI port
+      - "15692:15692" # Prometheus metrics port
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+      RABBITMQ_DEFAULT_VHOST: /
+      RABBITMQ_ERLANG_COOKIE: "secret-cookie"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - rabbitmq_log:/var/log/rabbitmq
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    networks:
+      - rabbitmq_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  rabbitmq-exporter:
+    image: kbudde/rabbitmq-exporter
+    container_name: rabbitmq-exporter
+    ports:
+      - "9419:9419"
+    environment:
+      RABBIT_URL: "http://rabbitmq:15672"
+      RABBIT_USER: "admin"
+      RABBIT_PASSWORD: "admin"
+      PUBLISH_PORT: "9419"
+    networks:
+      - rabbitmq_network
+    depends_on:
+      - rabbitmq
+
+volumes:
+  rabbitmq_data:
+  rabbitmq_log:
+
+networks:
+  rabbitmq_network:
+    driver: bridge
+EOF
+
