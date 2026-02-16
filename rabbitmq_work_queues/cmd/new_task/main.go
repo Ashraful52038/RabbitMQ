@@ -37,7 +37,7 @@ func main() {
 
 	q, err := ch.QueueDeclare(
 		"task_queue", // name
-		true,         // durable - RabbitMQ রিস্টার্টের পরও queue থাকবে
+		true,         // durable - RabbitMQ
 		false,        // delete when unused
 		false,        // exclusive
 		false,        // no-wait
@@ -55,7 +55,7 @@ func main() {
 		false,  // mandatory
 		false,
 		amqp.Publishing{
-			DeliveryMode: amqp.Persistent, // Persistent - message ডিস্কে সেভ হবে
+			DeliveryMode: amqp.Persistent, // Persistent - message save on disk
 			ContentType:  "text/plain",
 			Body:         []byte(body),
 		})

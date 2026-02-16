@@ -33,19 +33,19 @@ func main() {
 	)
 	failOnError(err, "Failed to declare a queue")
 
-	// Fair dispatch - এক সাথে একাধিক message না দেওয়া
+	// Fair dispatch -mot so much message in one time
 	err = ch.Qos(
-		1,     // prefetch count - একবারে ১টা message দাও
+		1,     // prefetch count - 1 message
 		0,     // prefetch size
 		false, // global
 	)
 	failOnError(err, "Failed to set QoS")
 
-	// কনজিউমার রেজিস্টার করুন (auto-ack = false)
+	// cosume register (auto-ack = false)
 	msgs, err := ch.Consume(
 		q.Name, // queue
 		"",     // consumer
-		false,  // auto-ack - false, মানে নিজে ack পাঠাবো
+		false,  // auto-ack - false,
 		false,  // exclusive
 		false,  // no-local
 		false,  // no-wait
@@ -53,14 +53,14 @@ func main() {
 	)
 	failOnError(err, "Failed to register a consumer")
 
-	// মেসেজ প্রসেস করুন
+	// message process at one time
 	forever := make(chan bool)
 
 	go func() {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
 
-			// ডটের সংখ্যা অনুযায়ী কাজের সময় (1 ডট = 1 সেকেন্ড)
+			// (1 Dot = 1 second)
 			dotCount := bytes.Count(d.Body, []byte("."))
 			t := time.Duration(dotCount)
 			time.Sleep(t * time.Second)

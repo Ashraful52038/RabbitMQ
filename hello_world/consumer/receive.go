@@ -13,17 +13,14 @@ func failOnError(err error, msg string) {
 }
 
 func main() {
-	// কানেক্ট করুন RabbitMQ তে (পোর্ট 5673)
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5673/")
 	failOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
 
-	// চ্যানেল তৈরি
 	ch, err := conn.Channel()
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
-	// কিউ ডিক্লেয়ার করুন
 	q, err := ch.QueueDeclare(
 		"hello", // name
 		false,   // durable
@@ -34,7 +31,6 @@ func main() {
 	)
 	failOnError(err, "Failed to declare a queue")
 
-	// কনজিউমার রেজিস্টার করুন
 	msgs, err := ch.Consume(
 		q.Name, // queue
 		"",     // consumer
@@ -46,10 +42,8 @@ func main() {
 	)
 	failOnError(err, "Failed to register a consumer")
 
-	// একটি চ্যানেল তৈরি করুন যা main কে থামিয়ে রাখবে
 	forever := make(chan bool)
 
-	// গোরুটিনে মেসেজের জন্য অপেক্ষা করুন
 	go func() {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
