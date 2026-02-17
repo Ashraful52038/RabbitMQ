@@ -255,6 +255,37 @@ classDiagram
     Priority <|-- AdvancedPatterns
 ```
 
+🔧 RPC (Remote Procedure Call) Configuration
+What is RPC Pattern?
+
+RPC allows you to call a function on a remote server and wait for the result, just like a local function call.
+
+RPC Architecture Diagram
+
+sequenceDiagram
+    participant Client
+    participant CallbackQ as Callback Queue
+    participant RequestQ as Request Queue (rpc_queue)
+    participant Server
+    
+    Client->>RequestQ: 1. Send Request + reply_to + correlation_id
+    Note over Client,RequestQ: reply_to: callback_queue<br/>correlation_id: unique-123
+    RequestQ->>Server: 2. Deliver Request
+    Server->>Server: 3. Process Request (fibonacci)
+    Server->>CallbackQ: 4. Send Response + correlation_id
+    CallbackQ->>Client: 5. Deliver Response
+    Note over Client: Match response<br/>using correlation_id
+
+RPC Configuration Parameters
+Parameter	Description	Example	Purpose
+reply_to	Callback queue name	amq.rabbitmq.reply-to	Where server sends response
+correlation_id	Unique request ID	UUID v4	Match request with response
+rpc_queue	Request queue name	rpc_queue	Where requests are sent
+Prefetch Count	QoS setting	1	Fair dispatch
+Timeout	Processing timeout	5s	Prevent hanging requests
+AutoAck	Manual acknowledgment	false	Reliable processing
+
+
 # 🔧 Advanced Features Implementation
 ## 1. Dead Letter Exchange (DLX)
 
