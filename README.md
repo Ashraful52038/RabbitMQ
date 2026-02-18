@@ -513,7 +513,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ![GitHub stars](https://img.shields.io/github/stars/Ashraful52038/RabbitMq?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/Ashraful52038/RabbitMq?style=social)
-![Twitter Follow](https://img.shields.io/twitter/follow/ashraful?style=social)
 
 Happy Coding! 🚀
 
